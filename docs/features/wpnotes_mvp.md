@@ -17,15 +17,15 @@ Usuario → WhatsApp → Evolution API → Backend (Fastify/Node/TS) → IA (Gem
 ## Hito 1 — Infraestructura Base
 > Monorepo, Supabase, Docker, CI. Ver `m1_infraestructura_base.md`
 
-- [ ] M1-T1: Inicializar monorepo (pnpm workspaces, TS strict)
-- [ ] M1-T2: Setup Supabase (migraciones SQL, RLS, Storage, Auth)
-- [ ] M1-T3: Config entorno con Zod (env.ts, .env.example)
-- [ ] M1-T4: Bootstrap Fastify (CORS, helmet, rate-limit, health, Pino)
-- [ ] M1-T5: Clientes Supabase (backend service-role, frontend browser+server)
-- [ ] M1-T6: Auth middleware (JWT verify, userId en request)
-- [ ] M1-T7: Docker Compose (Redis + Evolution API)
-- [ ] M1-T8: CI/CD pipeline (GitHub Actions)
-- [ ] M1-T9: Deploy Render.com (Dockerfiles)
+- [x] M1-T1: Inicializar monorepo (pnpm workspaces, TS strict)
+- [x] M1-T2: Setup Supabase (migraciones SQL, RLS, Storage, Auth)
+- [x] M1-T3: Config entorno con Zod (env.ts, .env.example)
+- [x] M1-T4: Bootstrap Fastify (CORS, helmet, rate-limit, health, Pino)
+- [x] M1-T5: Clientes Supabase (backend service-role, frontend browser+server)
+- [x] M1-T6: Auth middleware (JWT verify, userId en request)
+- [x] M1-T7: Docker Compose (Redis + Evolution API)
+- [x] M1-T8: CI/CD pipeline (GitHub Actions)
+- [x] M1-T9: Deploy Render.com (Dockerfiles)
 
 ## Hito 2 — Frontend
 > Diseño, componentes, páginas completas con mocks. Ver `m2_frontend.md`

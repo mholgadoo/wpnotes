@@ -1,0 +1,16 @@
+{
+  "name": "wpnotes",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter @wpnotes/* dev",
+    "dev:backend": "pnpm --filter @wpnotes/backend dev",
+    "dev:frontend": "pnpm --filter @wpnotes/frontend dev",
+    "build": "pnpm --filter @wpnotes/* build",
+    "lint": "pnpm --filter @wpnotes/* lint",
+    "typecheck": "pnpm --filter @wpnotes/* typecheck",
+    "test": "pnpm --filter @wpnotes/backend test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
