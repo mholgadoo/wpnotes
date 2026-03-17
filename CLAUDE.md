@@ -1,114 +1,233 @@
-# CLAUDE.md — Memoria Permanente del Proyecto Café
+# CLAUDE.md — WPNotes
 
-Este archivo es la fuente de verdad para el asistente IA. Debe consultarse al inicio de cada sesión y actualizarse cuando cambie algo estructural.
+Este archivo es la fuente de verdad para el asistente IA. Debe consultarse al inicio de cada sesión.
+
+---
+
+## Qué es WPNotes
+
+Asistente personal inteligente vía WhatsApp + Web App. El usuario envía audios, fotos, archivos y texto por WhatsApp; el backend los procesa con IA (transcripción, OCR, resúmenes); los datos sensibles se detectan y cifran; todo se presenta en un dashboard web con una "bóveda" segura.
+
+**Flujo:** Usuario → WhatsApp → Evolution API → Backend (Fastify/Node/TS) → IA (Gemini/OpenAI) → Supabase → Web App (Next.js)
+
+**Escala MVP:** 10-100 usuarios simultáneos.
 
 ---
 
 ## Stack Tecnológico
 
-| Capa       | Tecnología                                                      |
-|------------|-----------------------------------------------------------------|
-| Frontend   | Next.js (App Router), Tailwind CSS, shadcn/ui, next-intl (i18n)|
-| Backend    | Flask (Python), blueprints por recurso                          |
-| Base datos | Supabase (PostgreSQL)                                           |
-| Auth       | Supabase Auth + middleware Flask (`require_auth`, `require_roles`) |
-| Pagos      | MercadoPago                                                     |
-| Hosting    | (definir si aplica)                                             |
+| Capa       | Tecnología                                                        |
+|------------|-------------------------------------------------------------------|
+| Frontend   | Next.js 14+ (App Router), Tailwind CSS, shadcn/ui, TypeScript    |
+| Backend    | Fastify (Node.js/TypeScript), BullMQ (colas)                     |
+| Base datos | Supabase (PostgreSQL + Auth + Storage + Realtime)                 |
+| IA         | OpenAI (Whisper, GPT-4o), Google Gemini (docs grandes)            |
+| WhatsApp   | Evolution API v2 (self-hosted, webhooks HTTP)                     |
+| Cola       | BullMQ + Redis                                                    |
+| Seguridad  | AES-256-GCM (vault), bcrypt (hashing)                             |
+| Monorepo   | pnpm workspaces                                                   |
+| Hosting    | Render.com                                                        |
 
 ---
 
-## Arquitectura General
+## Arquitectura
 
 ```
-cafe/
+wpnotes/
 ├── backend/
-│   ├── app/
-│   │   ├── controllers/     # Blueprints Flask (un archivo por recurso)
-│   │   ├── services/        # Lógica de negocio (un archivo por dominio)
-│   │   ├── middleware/      # require_auth, require_roles
-│   │   └── routes.py        # Registro de todos los blueprints
-│   └── migrations/          # Archivos SQL numerados (ej: 014_*.sql)
+│   ├── src/
+│   │   ├── server.ts                 # Bootstrap Fastify
+│   │   ├── config/                   # env.ts, supabase.ts, redis.ts, logger.ts
+│   │   ├── middleware/               # error-handler, rate-limiter, request-logger
+│   │   └── modules/
+│   │       ├── auth/                 # auth.middleware.ts, auth.types.ts
+│   │       ├── whatsapp/             # controller, service, queue, worker, types
+│   │       ├── ai/                   # ai.service.ts, transcription, ocr, document, organizer, study
+│   │       │   └── providers/        # provider.interface.ts, openai, gemini
+│   │       ├── security/             # encryption, hashing, detector, vault
+│   │       ├── storage/              # storage.service.ts
+│   │       ├── notes/                # controller, service
+│   │       └── folders/              # controller, service
+│   ├── tests/
+│   │   ├── unit/
+│   │   ├── integration/
+│   │   └── fixtures/
+│   ├── Dockerfile
+│   └── package.json
 ├── frontend/
-│   ├── app/                 # Next.js App Router
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx                  # Landing / redirect
+│   │   ├── (auth)/
+│   │   │   ├── login/page.tsx
+│   │   │   └── register/page.tsx
+│   │   └── dashboard/
+│   │       ├── layout.tsx
+│   │       ├── page.tsx              # Notes overview
+│   │       ├── notes/[id]/page.tsx
+│   │       ├── folders/page.tsx
+│   │       ├── vault/page.tsx
+│   │       ├── upload/page.tsx
+│   │       └── settings/page.tsx
 │   ├── components/
-│   │   ├── admin/           # Componentes del panel admin
-│   │   └── cajero/          # Componentes del panel cajero
+│   │   ├── ui/                       # shadcn/ui
+│   │   ├── layout/                   # sidebar, header, theme
+│   │   ├── notes/                    # list, card, detail, search
+│   │   ├── folders/                  # tree, create-dialog
+│   │   └── vault/                    # list, detail, re-auth
 │   ├── lib/
-│   │   ├── fetcher.ts       # getClientAuthHeaderAsync()
-│   │   └── apiClient.ts     # getTenantApiBase()
-│   └── messages/
-│       ├── en.json          # Strings (EN y ES usan el mismo contenido en español)
-│       └── es.json
+│   │   ├── supabase-browser.ts
+│   │   ├── supabase-server.ts
+│   │   └── api-client.ts
+│   ├── hooks/                        # useNotes, useFolders, useVault, useRealtime
+│   ├── Dockerfile
+│   └── package.json
+├── supabase/
+│   └── migrations/                   # 001-007 SQL
 ├── docs/
-│   └── features/            # Especificaciones de features (ver _template.md)
-└── supabase/
+│   ├── features/                     # Specs por hito (ver _template.md)
+│   └── adr/                          # Architecture Decision Records
+├── docker-compose.yml                # Redis + Evolution API
+├── pnpm-workspace.yaml
+└── .github/workflows/ci.yml
 ```
 
 ---
 
 ## Convenciones de Código
 
-### Backend (Python/Flask)
-- Un blueprint por recurso en `controllers/`, registrado en `routes.py`.
-- Lógica de negocio exclusivamente en `services/`. Los controllers solo llaman services.
-- Siempre usar `require_auth` + `require_roles(["admin"])` (o el rol que corresponda) en endpoints protegidos.
-- `restaurant_id` se resuelve desde `user_id` usando `metrics_access_service.py`.
-- Migraciones SQL numeradas secuencialmente: `NNN_descripcion.sql`.
-- CSV exportado con encoding `utf-8-sig` (BOM para compatibilidad Excel).
+### Backend (Node.js/TypeScript/Fastify)
+- Un módulo por dominio en `src/modules/` (controller + service + types)
+- Controllers solo rutean requests → services. Lógica de negocio en services.
+- Auth via `requireAuth` preHandler hook (verifica JWT con Supabase)
+- `supabaseAdmin` (service-role) para operaciones del backend
+- Variables de entorno validadas con Zod al iniciar — falta una variable = server no arranca
+- Logs estructurados con Pino (JSON en prod, pretty en dev)
+- Tests con Vitest + Supertest
 
 ### Frontend (Next.js/TypeScript)
-- Auth header: `getClientAuthHeaderAsync()` from `@/lib/fetcher`.
-- API base: `getTenantApiBase()` from `@/lib/apiClient`.
-- i18n: `useTranslations("seccion.subseccion")` — ambos JSON deben tener las mismas keys.
-- Componentes de admin en `components/admin/`, de cajero en `components/cajero/`.
-- No hardcodear valores de negocio (ej: umbrales de stock). Vienen del backend.
-- Patrón CSV download: `fetch` autenticado → `blob()` → `anchor.click()`.
+- App Router con layouts anidados
+- Supabase Auth manejado client-side (`supabase-browser.ts`) y server-side (`supabase-server.ts`)
+- API client con auth automática (`api-client.ts` → agrega Bearer token)
+- shadcn/ui para todos los componentes de UI
+- Componentes organizados por feature: `components/notes/`, `components/vault/`, etc.
+- Custom hooks en `hooks/` para lógica reutilizable
+- Dark mode con next-themes
+
+### General
+- TypeScript strict en ambos
+- pnpm workspaces (@wpnotes/backend, @wpnotes/frontend)
+- ESLint + Prettier
 
 ---
 
 ## Reglas de Nombrado
 
-| Elemento              | Convención                              | Ejemplo                              |
-|-----------------------|-----------------------------------------|--------------------------------------|
-| Archivos Python       | snake_case                              | `cash_service.py`                    |
-| Clases Python         | PascalCase                              | `CashService`                        |
-| Funciones Python      | snake_case                              | `open_session()`                     |
-| Archivos TS/TSX       | kebab-case                              | `cash-monitor.tsx`                   |
-| Componentes React     | PascalCase                              | `CashMonitor`                        |
-| Keys i18n             | dot.notation anidada                    | `admin.cash.title`                   |
-| Tablas Supabase       | snake_case, plural                      | `cash_sessions`                      |
-| Archivos de features  | snake_case en `docs/features/`          | `cash_single_register.md`            |
+| Elemento              | Convención     | Ejemplo                     |
+|-----------------------|----------------|-----------------------------|
+| Archivos TS backend   | kebab-case     | `whatsapp.service.ts`       |
+| Clases TS             | PascalCase     | `WhatsAppService`           |
+| Funciones TS          | camelCase      | `parseWebhookMessage()`     |
+| Archivos TSX frontend | kebab-case     | `note-card.tsx`             |
+| Componentes React     | PascalCase     | `NoteCard`                  |
+| Tablas Supabase       | snake_case     | `vault_items`               |
+| Migraciones SQL       | NNN_desc.sql   | `003_notes.sql`             |
+| Features docs         | snake_case     | `m2_frontend.md`            |
 
 ---
 
-## Flujo de Trabajo Obligatorio (Spec-Driven)
+## Flujo de Trabajo (Spec-Driven)
 
-**Para cualquier tarea que no sea un fix trivial de 1-2 líneas, el asistente DEBE seguir estos pasos sin excepción:**
+**Para cualquier tarea que no sea un fix trivial:**
 
 ### PASO 1 — Plan
 1. Analizar el pedido y explorar el código relevante.
-2. Crear o actualizar `docs/features/<nombre_feature>.md` usando el template en `docs/features/_template.md`.
-3. Presentar el plan al usuario con un resumen de los cambios propuestos.
+2. Crear o actualizar `docs/features/<nombre>.md` usando `docs/features/_template.md`.
+3. Presentar el plan al usuario con un resumen.
 
 ### PASO 2 — Validación (STOP)
-- **El asistente NO escribe ni modifica código de la aplicación hasta recibir aprobación explícita.**
-- El usuario debe responder "Plan aprobado" (o similar) para continuar.
-- Si el usuario pide cambios al plan, actualizar el `.md` y volver al PASO 2.
+- **NO se escribe código hasta recibir aprobación explícita.**
+- Si hay cambios al plan, actualizar el `.md` y volver al PASO 2.
 
 ### PASO 3 — Ejecución
-- Ejecutar los cambios tarea por tarea, siguiendo el orden del archivo de feature.
-- Después de cada tarea completada, marcar el checkbox `[ ]` → `[x]` en el archivo de feature.
-- **Regla de Errores:** Si durante la ejecución te encuentras con un error y tu primer intento de fix no funciona,**DETENTE**. Explica el error al usuario y propón una solución antes de seguir modificando código a ciegas.
+- Ejecutar tarea por tarea, marcando checkboxes `[ ]` → `[x]`.
+- **Regla de Errores:** Si un fix no funciona al primer intento, DETENERSE y explicar.
 
 ### PASO 4 — Cierre
-- Verificar que todos los checkboxes estén marcados.
-- Actualizar `MEMORY.md` si hubo cambios arquitecturales o de convención relevantes.
-- Informar al usuario que la feature está completa.
+- Verificar todos los checkboxes marcados.
+- Actualizar `MEMORY.md` si hubo cambios arquitecturales.
 
 ---
 
-## Estado Actual del Proyecto
+## Estrategia de Implementación
 
-Ver `memory/MEMORY.md` para el historial de features implementadas.
+**Frontend primero, backend después.** El frontend se diseña y construye con datos mock / Supabase directo. Cuando el frontend esté como queremos, se arma el backend y se conecta. El backend se puede ir armando en paralelo pero sin conectar.
 
-Archivos de features activas: `docs/features/` (cada `.md` es una feature con su estado).
+### Orden de Hitos
+1. **M1 — Infraestructura Base**: Monorepo, Supabase, Docker, CI
+2. **M2 — Frontend**: Diseño, componentes, páginas completas (con mocks)
+3. **M3 — Backend**: Fastify, APIs, WhatsApp, AI, Security
+4. **M4 — Integración y Testing E2E**: Conectar frontend↔backend, tests
+
+Ver `docs/features/` para el detalle de cada hito.
+
+---
+
+## Database Schema
+
+### profiles
+`id` UUID PK (→ auth.users), `display_name`, `phone_number` UNIQUE, `whatsapp_linked` BOOLEAN, timestamps
+
+### folders
+`id` UUID PK, `user_id` FK, `name`, `parent_id` FK NULLABLE, `icon`, `is_auto` BOOLEAN, timestamps. UNIQUE(user_id, name, parent_id)
+
+### notes
+`id` UUID PK, `user_id` FK, `folder_id` FK NULLABLE, `title`, `content`, `summary`, `source_type` CHECK(text,audio,image,document), `original_wa_id`, `tags` TEXT[], `is_sensitive` BOOLEAN, `fts` tsvector GENERATED, timestamps
+
+### attachments
+`id` UUID PK, `note_id` FK CASCADE, `user_id` FK, `file_name`, `file_type`, `file_size`, `storage_path`, timestamp
+
+### vault_items
+`id` UUID PK, `user_id` FK, `label`, `type` CHECK(password,id_photo,card,other), `encrypted_data`, `iv`, `auth_tag`, `metadata` JSONB, timestamps
+
+### processing_jobs
+`id` UUID PK, `user_id` FK, `status` CHECK(queued,processing,completed,failed), `job_type`, `input_ref`, `output_ref`, `error`, timestamps
+
+RLS en todas las tablas con `user_id = auth.uid()`.
+
+---
+
+## API Endpoints (Backend)
+
+| Método | Ruta                    | Auth | Descripción                    |
+|--------|-------------------------|------|--------------------------------|
+| POST   | /webhook/whatsapp       | API key | Recibe webhooks Evolution API |
+| GET    | /api/whatsapp/status    | JWT  | Estado conexión WhatsApp       |
+| GET    | /api/notes              | JWT  | Listar notas (paginado, filtros) |
+| GET    | /api/notes/:id          | JWT  | Nota con attachments           |
+| PUT    | /api/notes/:id          | JWT  | Actualizar nota                |
+| DELETE | /api/notes/:id          | JWT  | Eliminar nota                  |
+| GET    | /api/notes/search?q=    | JWT  | Búsqueda full-text             |
+| GET    | /api/folders            | JWT  | Listar carpetas                |
+| POST   | /api/folders            | JWT  | Crear carpeta                  |
+| PUT    | /api/folders/:id        | JWT  | Actualizar carpeta             |
+| DELETE | /api/folders/:id        | JWT  | Eliminar carpeta               |
+| GET    | /api/vault              | JWT  | Listar items (solo metadata)   |
+| GET    | /api/vault/:id          | JWT+re-auth | Desencriptar item       |
+| POST   | /api/vault              | JWT  | Crear vault item               |
+| DELETE | /api/vault/:id          | JWT  | Eliminar vault item            |
+| POST   | /api/upload             | JWT  | Upload manual → cola           |
+| GET    | /health                 | -    | Health check                   |
+
+---
+
+## Decisiones Técnicas Clave
+
+- **Fastify** sobre Express (performance 2-3x, schema validation, TS nativo)
+- **AI Provider-Agnostic**: Interface IAIProvider, routing por costo/tarea
+- **Evolution API webhooks HTTP** (stateless, escalable, compatible Render)
+- **BullMQ** para procesamiento async (retries, DLQ, backoff exponencial)
+- **AES-256-GCM** para vault (authenticated encryption, IV único, PBKDF2)
+- **Deduplicación**: `original_wa_id` como idempotency key
+- **Límite archivos**: 25MB (límite WhatsApp)
+- **Costos AI**: Gemini para docs grandes, Whisper para audio
