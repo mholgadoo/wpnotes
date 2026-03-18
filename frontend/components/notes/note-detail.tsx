@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FolderOpen, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SourceBadge } from "./source-badge";
+import { ParaBadge } from "./para-badge";
 import type { Note } from "@/lib/mock-data";
 
 export function NoteDetail({ note }: { note: Note }) {
@@ -29,12 +30,7 @@ export function NoteDetail({ note }: { note: Note }) {
 
           <div className="flex flex-wrap items-center gap-2">
             <SourceBadge type={note.source_type} />
-            {note.folder_name && (
-              <Badge variant="outline" className="gap-1">
-                <FolderOpen className="h-3 w-3" />
-                {note.folder_name}
-              </Badge>
-            )}
+            <ParaBadge note={note} />
             {note.tags.map((tag) => (
               <Badge key={tag} variant="outline">
                 {tag}

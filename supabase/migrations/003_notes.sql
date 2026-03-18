@@ -9,6 +9,7 @@ CREATE TABLE notes (
   original_wa_id TEXT,
   tags TEXT[] DEFAULT '{}',
   is_sensitive BOOLEAN DEFAULT false,
+  reminder_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -24,6 +25,7 @@ CREATE INDEX idx_notes_folder_id ON notes(folder_id);
 CREATE INDEX idx_notes_source_type ON notes(user_id, source_type);
 CREATE INDEX idx_notes_tags ON notes USING GIN(tags);
 CREATE UNIQUE INDEX idx_notes_wa_id ON notes(original_wa_id) WHERE original_wa_id IS NOT NULL;
+CREATE INDEX idx_notes_reminder ON notes(reminder_at) WHERE reminder_at IS NOT NULL;
 
 -- Full-text search (spanish, weighted)
 ALTER TABLE notes ADD COLUMN fts tsvector

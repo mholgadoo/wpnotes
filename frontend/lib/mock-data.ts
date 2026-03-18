@@ -1,3 +1,5 @@
+export type ParaCategory = "project" | "area" | "resource" | "archive";
+
 export interface Note {
   id: string;
   title: string;
@@ -8,6 +10,7 @@ export interface Note {
   is_sensitive: boolean;
   folder_id: string | null;
   folder_name?: string;
+  reminder_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +18,7 @@ export interface Note {
 export interface Folder {
   id: string;
   name: string;
+  para_category: ParaCategory;
   parent_id: string | null;
   icon: string;
   is_auto: boolean;
@@ -29,11 +33,26 @@ export interface VaultItem {
   created_at: string;
 }
 
+export const PARA_CONFIG: Record<ParaCategory, { label: string; icon: string; color: string; description: string }> = {
+  project: { label: "Proyectos", icon: "Target", color: "blue", description: "Cosas con objetivo claro y deadline" },
+  area: { label: "Áreas", icon: "Layers", color: "green", description: "Responsabilidades continuas" },
+  resource: { label: "Recursos", icon: "BookOpen", color: "amber", description: "Temas de interés y referencia" },
+  archive: { label: "Archivo", icon: "Archive", color: "gray", description: "Lo que ya no está activo" },
+};
+
 export const mockFolders: Folder[] = [
-  { id: "f1", name: "Trabajo", parent_id: null, icon: "💼", is_auto: false, note_count: 3, created_at: "2026-03-10T10:00:00Z" },
-  { id: "f2", name: "Universidad", parent_id: null, icon: "🎓", is_auto: false, note_count: 4, created_at: "2026-03-10T10:00:00Z" },
-  { id: "f3", name: "Personal", parent_id: null, icon: "📁", is_auto: true, note_count: 2, created_at: "2026-03-12T10:00:00Z" },
-  { id: "f4", name: "Álgebra", parent_id: "f2", icon: "📐", is_auto: true, note_count: 2, created_at: "2026-03-14T10:00:00Z" },
+  // Projects
+  { id: "f1", name: "Trabajo", para_category: "project", parent_id: null, icon: "💼", is_auto: false, note_count: 3, created_at: "2026-03-10T10:00:00Z" },
+  { id: "f5", name: "Proyecto Final", para_category: "project", parent_id: null, icon: "🎯", is_auto: false, note_count: 1, created_at: "2026-03-11T10:00:00Z" },
+  // Areas
+  { id: "f2", name: "Universidad", para_category: "area", parent_id: null, icon: "🎓", is_auto: false, note_count: 4, created_at: "2026-03-10T10:00:00Z" },
+  { id: "f4", name: "Álgebra", para_category: "area", parent_id: "f2", icon: "📐", is_auto: true, note_count: 2, created_at: "2026-03-14T10:00:00Z" },
+  { id: "f6", name: "Finanzas", para_category: "area", parent_id: null, icon: "💰", is_auto: false, note_count: 0, created_at: "2026-03-12T10:00:00Z" },
+  // Resources
+  { id: "f7", name: "Papers IA", para_category: "resource", parent_id: null, icon: "🤖", is_auto: false, note_count: 1, created_at: "2026-03-13T10:00:00Z" },
+  { id: "f8", name: "Recetas", para_category: "resource", parent_id: null, icon: "🍳", is_auto: false, note_count: 0, created_at: "2026-03-13T10:00:00Z" },
+  // Archive
+  { id: "f3", name: "Personal", para_category: "archive", parent_id: null, icon: "📁", is_auto: true, note_count: 2, created_at: "2026-03-12T10:00:00Z" },
 ];
 
 export const mockNotes: Note[] = [
@@ -84,8 +103,8 @@ export const mockNotes: Note[] = [
     source_type: "document",
     tags: ["IA", "transformers", "paper", "deep learning"],
     is_sensitive: false,
-    folder_id: "f2",
-    folder_name: "Universidad",
+    folder_id: "f7",
+    folder_name: "Papers IA",
     created_at: "2026-03-14T16:45:00Z",
     updated_at: "2026-03-14T16:45:00Z",
   },
@@ -110,8 +129,8 @@ export const mockNotes: Note[] = [
     source_type: "text",
     tags: ["proyecto", "ideas", "brainstorming"],
     is_sensitive: false,
-    folder_id: "f2",
-    folder_name: "Universidad",
+    folder_id: "f5",
+    folder_name: "Proyecto Final",
     created_at: "2026-03-12T20:00:00Z",
     updated_at: "2026-03-12T20:00:00Z",
   },
@@ -122,3 +141,20 @@ export const mockVaultItems: VaultItem[] = [
   { id: "v2", label: "PIN tarjeta débito", type: "card", created_at: "2026-03-11T15:30:00Z" },
   { id: "v3", label: "Token API producción", type: "password", created_at: "2026-03-10T08:00:00Z" },
 ];
+
+// Helper: get the PARA category of a note via its folder
+export function getNotePara(note: Note): ParaCategory | null {
+  if (!note.folder_id) return null;
+  const folder = mockFolders.find((f) => f.id === note.folder_id);
+  return folder?.para_category ?? null;
+}
+
+// Helper: get root folders for a given PARA category
+export function getFoldersByCategory(category: ParaCategory): Folder[] {
+  return mockFolders.filter((f) => f.para_category === category && f.parent_id === null);
+}
+
+// Helper: get sub-folders of a parent folder
+export function getSubFolders(parentId: string): Folder[] {
+  return mockFolders.filter((f) => f.parent_id === parentId);
+}

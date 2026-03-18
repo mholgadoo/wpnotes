@@ -10,6 +10,8 @@ Asistente personal inteligente vía WhatsApp + Web App. El usuario envía audios
 
 **Flujo:** Usuario → WhatsApp → Evolution API → Backend (Fastify/Node/TS) → IA (Gemini/OpenAI) → Supabase → Web App (Next.js)
 
+**Organización:** Second Brain (Tiago Forte). Las notas se organizan con el sistema PARA (Projects, Areas, Resources, Archive). La IA auto-clasifica cada nota en la categoría y carpeta correspondiente. El pipeline sigue CODE (Capture → Organize → Distill → Express).
+
 **Escala MVP:** 10-100 usuarios simultáneos.
 
 ---
@@ -178,11 +180,11 @@ Ver `docs/features/` para el detalle de cada hito.
 ### profiles
 `id` UUID PK (→ auth.users), `display_name`, `phone_number` UNIQUE, `whatsapp_linked` BOOLEAN, timestamps
 
-### folders
-`id` UUID PK, `user_id` FK, `name`, `parent_id` FK NULLABLE, `icon`, `is_auto` BOOLEAN, timestamps. UNIQUE(user_id, name, parent_id)
+### folders (PARA)
+`id` UUID PK, `user_id` FK, `name`, `para_category` CHECK(project,area,resource,archive), `parent_id` FK NULLABLE (max 1 nivel), `icon`, `is_auto` BOOLEAN, timestamps. UNIQUE(user_id, name, para_category, parent_id). Triggers: validación de profundidad máxima 1 nivel y herencia de `para_category` del padre.
 
 ### notes
-`id` UUID PK, `user_id` FK, `folder_id` FK NULLABLE, `title`, `content`, `summary`, `source_type` CHECK(text,audio,image,document), `original_wa_id`, `tags` TEXT[], `is_sensitive` BOOLEAN, `fts` tsvector GENERATED, timestamps
+`id` UUID PK, `user_id` FK, `folder_id` FK NULLABLE, `title`, `content`, `summary`, `source_type` CHECK(text,audio,image,document), `original_wa_id`, `tags` TEXT[], `is_sensitive` BOOLEAN, `reminder_at` TIMESTAMPTZ NULLABLE (futuro Google Calendar), `fts` tsvector GENERATED, timestamps
 
 ### attachments
 `id` UUID PK, `note_id` FK CASCADE, `user_id` FK, `file_name`, `file_type`, `file_size`, `storage_path`, timestamp
@@ -231,3 +233,5 @@ RLS en todas las tablas con `user_id = auth.uid()`.
 - **Deduplicación**: `original_wa_id` como idempotency key
 - **Límite archivos**: 25MB (límite WhatsApp)
 - **Costos AI**: Gemini para docs grandes, Whisper para audio
+- **Second Brain (PARA)**: Organización en Projects/Areas/Resources/Archive. IA auto-clasifica. Carpetas con máximo 1 nivel de sub-carpetas dentro de cada categoría.
+- **Reminders**: Campo `reminder_at` en notes preparado para futura integración con Google Calendar API

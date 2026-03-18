@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { Shield, FolderOpen } from "lucide-react";
+import { Shield } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SourceBadge } from "./source-badge";
+import { ParaBadge } from "./para-badge";
 import type { Note } from "@/lib/mock-data";
 
 function timeAgo(dateStr: string) {
@@ -38,12 +39,7 @@ export function NoteCard({ note }: { note: Note }) {
 
           <div className="flex flex-wrap items-center gap-1.5">
             <SourceBadge type={note.source_type} />
-            {note.folder_name && (
-              <Badge variant="outline" className="gap-1 font-normal text-xs">
-                <FolderOpen className="h-3 w-3" />
-                {note.folder_name}
-              </Badge>
-            )}
+            <ParaBadge note={note} />
             {note.tags.slice(0, 2).map((tag) => (
               <Badge key={tag} variant="outline" className="font-normal text-xs">
                 {tag}
