@@ -30,15 +30,15 @@ Usuario → WhatsApp → Evolution API → Backend (Fastify/Node/TS) → IA (Gem
 ## Hito 2 — Frontend
 > Diseño, componentes, páginas completas con mocks. Ver `m2_frontend.md`
 
-- [ ] M2-T1: Design system y setup shadcn/ui
-- [ ] M2-T2: Auth pages (login/register con Supabase Auth)
-- [ ] M2-T3: Dashboard layout (sidebar, header, responsive, dark mode)
-- [ ] M2-T4: Lista y visor de notas (search, filtros, paginación, markdown)
-- [ ] M2-T5: Gestión de carpetas (árbol, CRUD, filtro)
-- [ ] M2-T6: Bóveda (lista, re-auth, auto-hide 30s)
-- [ ] M2-T7: Upload manual (dropzone, progress, estado)
-- [ ] M2-T8: Settings (perfil, WhatsApp status, uso)
-- [ ] M2-T9: Realtime (Supabase Realtime, notas sin refresh)
+- [x] M2-T1: Design system y setup shadcn/ui
+- [x] M2-T2: Auth pages (login/register con Supabase Auth)
+- [x] M2-T3: Dashboard layout (sidebar, header, responsive, dark mode)
+- [x] M2-T4: Lista y visor de notas (search, filtros, paginación, markdown)
+- [x] M2-T5: Gestión de carpetas (árbol, CRUD, filtro)
+- [x] M2-T6: Bóveda (lista, re-auth, auto-hide 30s)
+- [x] M2-T7: Upload manual (dropzone, progress, estado)
+- [x] M2-T8: Settings (perfil, WhatsApp status, uso)
+- [x] M2-T9: Realtime (Supabase Realtime, notas sin refresh)
 
 ## Hito 3 — Backend
 > API, WhatsApp, AI, Seguridad. Ver `m3_backend.md`
